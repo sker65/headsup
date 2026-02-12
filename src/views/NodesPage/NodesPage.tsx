@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '../../api/ApiProvider';
 import type { V1Node } from '../../api/types';
 import { ConfirmDialog } from '../../ui/Dialogs/ConfirmDialog';
+import { ServerIndicator } from '../../ui/Server/ServerIndicator';
 import { MobileMenuIconButton } from '../../ui/Theme/MobileMenuIconButton';
 import { ThemeToggleIconButton } from '../../ui/Theme/ThemeToggleIconButton';
 import { useToaster } from '../../ui/Toaster/useToaster';
@@ -108,6 +109,7 @@ export function NodesPage() {
             </Box>
             <Stack direction="row" spacing={1} alignItems="center">
               <MobileMenuIconButton />
+              <ServerIndicator />
               <ThemeToggleIconButton />
               <Button onClick={load} color="inherit">
                 Refresh

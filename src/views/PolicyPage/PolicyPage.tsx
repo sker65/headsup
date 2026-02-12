@@ -2,6 +2,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useApi } from '../../api/ApiProvider';
+import { ServerIndicator } from '../../ui/Server/ServerIndicator';
 import { MobileMenuIconButton } from '../../ui/Theme/MobileMenuIconButton';
 import { ThemeToggleIconButton } from '../../ui/Theme/ThemeToggleIconButton';
 import { useToaster } from '../../ui/Toaster/useToaster';
@@ -41,8 +42,9 @@ export function PolicyPage() {
                 View and update ACL policy
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} alignItems="center">
               <MobileMenuIconButton />
+              <ServerIndicator />
               <ThemeToggleIconButton />
               <Button onClick={load} color="inherit">
                 Refresh
