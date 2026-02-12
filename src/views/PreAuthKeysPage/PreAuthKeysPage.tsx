@@ -42,6 +42,7 @@ export function PreAuthKeysPage() {
   const [ephemeral, setEphemeral] = useState(false);
   const [expiration, setExpiration] = useState<string>('');
   const [aclTags, setAclTags] = useState<string[]>([]);
+  const [aclTagsInput, setAclTagsInput] = useState('');
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -182,6 +183,8 @@ export function PreAuthKeysPage() {
               freeSolo
               options={[]}
               value={aclTags}
+              inputValue={aclTagsInput}
+              onInputChange={(_, v) => setAclTagsInput(v)}
               onChange={(_, v) => setAclTags(v)}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option} />)
@@ -199,12 +202,15 @@ export function PreAuthKeysPage() {
             disabled={!createUser?.id}
             onClick={async () => {
               try {
+                const normalizedTags = [...aclTags, aclTagsInput]
+                  .map((t) => t.trim())
+                  .filter((t) => Boolean(t));
                 const res = await api.createPreAuthKey({
                   user: createUser?.id,
                   reusable,
                   ephemeral,
                   expiration: expiration ? new Date(expiration).toISOString() : undefined,
-                  aclTags: aclTags.length ? aclTags : undefined,
+                  aclTags: normalizedTags.length ? normalizedTags : undefined,
                 });
                 const secret = res.preAuthKey?.key;
                 if (!secret) {
@@ -219,6 +225,7 @@ export function PreAuthKeysPage() {
                 setEphemeral(false);
                 setExpiration('');
                 setAclTags([]);
+                setAclTagsInput('');
                 await load();
               } catch (e) {
                 toaster.show(e instanceof Error ? e.message : 'Failed to create preauth key', 'error');
