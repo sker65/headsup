@@ -1,0 +1,10 @@
+services:
+  headsup:
+    build: .
+    ports:
+      - "8081:80"
+    environment:
+      # Headscale base URL
+      BASE_URL: "http://localhost:8080"
+      # Headscale API key
+      APIKEY: "your_api_key_here"

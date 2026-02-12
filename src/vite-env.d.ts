@@ -10,3 +10,14 @@ declare interface ImportMetaEnv {
 declare interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare global {
+  interface Window {
+    __HEADSUP_CONFIG__?: {
+      BASE_URL?: string;
+      APIKEY?: string;
+    };
+  }
+}
+
+export {};

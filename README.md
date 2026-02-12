@@ -22,6 +22,41 @@ npm install
 npm run dev
 ```
 
+## Docker
+
+The Docker image serves static files via nginx.
+
+### Runtime configuration
+
+In Docker, `BASE_URL` and `APIKEY` are injected at **container start** into `/config.js`.
+
+Required env vars:
+
+- `BASE_URL` (or `VITE_BASE_URL`)
+- `APIKEY` (or `VITE_APIKEY`)
+
+### Build and run
+
+```bash
+docker build -t headsup .
+docker run --rm -p 8081:80 \
+  -e BASE_URL="http://localhost:8080" \
+  -e APIKEY="your_api_key_here" \
+  headsup
+```
+
+Then open:
+
+- http://localhost:8081
+
+### docker-compose
+
+Edit `docker-compose.yaml` and run:
+
+```bash
+docker compose up --build
+```
+
 ## Security note
 
 When creating secrets like **PreAuth keys** and **API keys**, the UI will display the secret exactly once in a dedicated dialog and does not persist it.
