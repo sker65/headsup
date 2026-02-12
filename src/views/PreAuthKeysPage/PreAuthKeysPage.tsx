@@ -18,7 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApi } from '../../api/ApiProvider';
 import type { V1PreAuthKey, V1User } from '../../api/types';
 import { ConfirmDialog } from '../../ui/Dialogs/ConfirmDialog';
@@ -45,10 +45,11 @@ export function PreAuthKeysPage() {
   const [aclTagsInput, setAclTagsInput] = useState('');
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
 
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [k, u] = await Promise.all([api.listPreAuthKeys(), api.listUsers()]);
@@ -59,11 +60,16 @@ export function PreAuthKeysPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api, toaster]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
+
+  const cleanupCandidates = useMemo(
+    () => rows.filter((k) => k.used === true && k.reusable === false && Boolean(k.id)),
+    [rows],
+  );
 
   const cols = useMemo<GridColDef<V1PreAuthKey>[]>(
     () => [
@@ -128,8 +134,15 @@ export function PreAuthKeysPage() {
               <MobileMenuIconButton />
               <ServerIndicator />
               <ThemeToggleIconButton />
-              <Button onClick={load} color="inherit">
+              <Button onClick={() => void load()} color="inherit">
                 Refresh
+              </Button>
+              <Button
+                onClick={() => setCleanupOpen(true)}
+                color="inherit"
+                disabled={cleanupCandidates.length === 0}
+              >
+                Cleanup used
               </Button>
               <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
                 Create key
@@ -256,6 +269,63 @@ export function PreAuthKeysPage() {
           }
         }}
       />
+
+      <Dialog open={cleanupOpen} onClose={() => setCleanupOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cleanup used preauth keys</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2">
+              This will delete <strong>{cleanupCandidates.length}</strong> keys where <strong>Used = true</strong> and{' '}
+              <strong>Reusable = false</strong>.
+            </Typography>
+            <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap' }}>
+              {cleanupCandidates.slice(0, 20).map((k) => (
+                <Chip key={k.id} label={`#${k.id}`} size="small" />
+              ))}
+              {cleanupCandidates.length > 20 ? <Chip label={`+${cleanupCandidates.length - 20} more`} size="small" /> : null}
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCleanupOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              const ids = cleanupCandidates
+                .map((k) => k.id)
+                .filter((id): id is string => Boolean(id));
+
+              if (!ids.length) {
+                setCleanupOpen(false);
+                return;
+              }
+
+              try {
+                const results = await Promise.allSettled(ids.map((id) => api.deletePreAuthKey(id)));
+                const deleted = results.filter((r) => r.status === 'fulfilled').length;
+                const failed = results.length - deleted;
+
+                if (failed) {
+                  toaster.show(`Deleted ${deleted} keys, ${failed} failed`, 'warning');
+                } else {
+                  toaster.show(`Deleted ${deleted} keys`, 'success');
+                }
+              } catch (e) {
+                toaster.show(e instanceof Error ? e.message : 'Failed to cleanup keys', 'error');
+              } finally {
+                setCleanupOpen(false);
+                await load();
+              }
+            }}
+            variant="contained"
+            color="error"
+            disabled={cleanupCandidates.length === 0}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <SecretRevealDialog
         open={Boolean(revealedSecret)}

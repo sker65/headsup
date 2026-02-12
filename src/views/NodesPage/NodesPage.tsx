@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
@@ -32,6 +33,8 @@ export function NodesPage() {
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+
   const [renameNode, setRenameNode] = useState<V1Node | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -50,6 +53,20 @@ export function NodesPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const cleanupCandidates = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return rows.filter((n) => {
+      if (!n.id) return false;
+      if (n.online !== false) return false;
+      if (!n.lastSeen) return false;
+      const t = Date.parse(n.lastSeen);
+      if (!Number.isFinite(t)) return false;
+      return t < cutoff;
+    });
+  }, [rows]);
+
+  const cleanupDisabled = cleanupCandidates.length === 0;
 
   const cols = useMemo<GridColDef<V1Node>[]>(
     () => [
@@ -136,6 +153,18 @@ export function NodesPage() {
               <Button onClick={() => void load()} color="inherit">
                 Refresh
               </Button>
+              <Tooltip
+                title={cleanupDisabled ? 'No offline nodes with Last seen older than 24 hours' : ''}
+                disableHoverListener={!cleanupDisabled}
+                disableFocusListener={!cleanupDisabled}
+                disableTouchListener={!cleanupDisabled}
+              >
+                <span>
+                  <Button onClick={() => setCleanupOpen(true)} color="inherit" disabled={cleanupDisabled}>
+                    Cleanup offline
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
           </Stack>
         </CardContent>
@@ -176,6 +205,63 @@ export function NodesPage() {
           }
         }}
       />
+
+      <Dialog open={cleanupOpen} onClose={() => setCleanupOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cleanup offline nodes</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2">
+              This will delete <strong>{cleanupCandidates.length}</strong> nodes where <strong>Online = false</strong> and{' '}
+              <strong>Last seen</strong> is older than <strong>24 hours</strong>.
+            </Typography>
+            <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap' }}>
+              {cleanupCandidates.slice(0, 20).map((n) => (
+                <Chip key={n.id} label={`#${n.id}${n.name ? ` ${n.name}` : ''}`} size="small" />
+              ))}
+              {cleanupCandidates.length > 20 ? <Chip label={`+${cleanupCandidates.length - 20} more`} size="small" /> : null}
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCleanupOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              const ids = cleanupCandidates
+                .map((n) => n.id)
+                .filter((id): id is string => Boolean(id));
+
+              if (!ids.length) {
+                setCleanupOpen(false);
+                return;
+              }
+
+              try {
+                const results = await Promise.allSettled(ids.map((id) => api.deleteNode(id)));
+                const deleted = results.filter((r) => r.status === 'fulfilled').length;
+                const failed = results.length - deleted;
+
+                if (failed) {
+                  toaster.show(`Deleted ${deleted} nodes, ${failed} failed`, 'warning');
+                } else {
+                  toaster.show(`Deleted ${deleted} nodes`, 'success');
+                }
+              } catch (e) {
+                toaster.show(e instanceof Error ? e.message : 'Failed to cleanup nodes', 'error');
+              } finally {
+                setCleanupOpen(false);
+                await load();
+              }
+            }}
+            variant="contained"
+            color="error"
+            disabled={cleanupCandidates.length === 0}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(renameNode)}
