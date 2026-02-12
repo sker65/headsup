@@ -1,15 +1,21 @@
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import {
   Box,
   Button,
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApi } from '../../api/ApiProvider';
 import type { V1Node } from '../../api/types';
 import { ConfirmDialog } from '../../ui/Dialogs/ConfirmDialog';
@@ -26,7 +32,10 @@ export function NodesPage() {
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const load = async () => {
+  const [renameNode, setRenameNode] = useState<V1Node | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.listNodes();
@@ -36,11 +45,11 @@ export function NodesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api, toaster]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const cols = useMemo<GridColDef<V1Node>[]>(
     () => [
@@ -77,19 +86,32 @@ export function NodesPage() {
       {
         field: 'actions',
         headerName: '',
-        width: 110,
+        width: 210,
         sortable: false,
         filterable: false,
         renderCell: (params) => (
-          <Button
-            color="error"
-            size="small"
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteId(params.row.id ?? null)}
-            disabled={!params.row.id}
-          >
-            Delete
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                setRenameNode(params.row);
+                setRenameValue(params.row.name ?? '');
+              }}
+              disabled={!params.row.id}
+            >
+              Rename
+            </Button>
+            <Button
+              color="error"
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={() => setDeleteId(params.row.id ?? null)}
+              disabled={!params.row.id}
+            >
+              Delete
+            </Button>
+          </Stack>
         ),
       },
     ],
@@ -111,7 +133,7 @@ export function NodesPage() {
               <MobileMenuIconButton />
               <ServerIndicator />
               <ThemeToggleIconButton />
-              <Button onClick={load} color="inherit">
+              <Button onClick={() => void load()} color="inherit">
                 Refresh
               </Button>
             </Stack>
@@ -154,6 +176,58 @@ export function NodesPage() {
           }
         }}
       />
+
+      <Dialog
+        open={Boolean(renameNode)}
+        onClose={() => {
+          setRenameNode(null);
+          setRenameValue('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Rename node</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField label="Node" value={renameNode?.name ?? '-'} InputProps={{ readOnly: true }} />
+            <TextField
+              label="New name"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              autoFocus
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setRenameNode(null);
+              setRenameValue('');
+            }}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!renameNode?.id || !renameValue.trim()}
+            onClick={async () => {
+              if (!renameNode?.id) return;
+              try {
+                await api.renameNode(renameNode.id, renameValue.trim());
+                toaster.show('Node renamed', 'success');
+                setRenameNode(null);
+                setRenameValue('');
+                await load();
+              } catch (e) {
+                toaster.show(e instanceof Error ? e.message : 'Failed to rename node', 'error');
+              }
+            }}
+          >
+            Rename
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }
