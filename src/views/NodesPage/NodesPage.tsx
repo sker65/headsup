@@ -25,6 +25,28 @@ import { MobileMenuIconButton } from '../../ui/Theme/MobileMenuIconButton';
 import { ThemeToggleIconButton } from '../../ui/Theme/ThemeToggleIconButton';
 import { useToaster } from '../../ui/Toaster/useToaster';
 
+function formatRelativeTime(iso?: string) {
+  if (!iso) return '-';
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return iso;
+
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return 'in the future';
+
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 10) return 'just now';
+  if (sec < 60) return `${sec}s ago`;
+
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min ago`;
+
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+
+  const days = Math.floor(hr / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
 export function NodesPage() {
   const { api } = useApi();
   const toaster = useToaster();
@@ -92,6 +114,19 @@ export function NodesPage() {
         ),
       },
       {
+        field: 'tags',
+        headerName: 'Tags',
+        flex: 1,
+        minWidth: 220,
+        renderCell: (params) => (
+          <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', py: 1 }}>
+            {(params.row.tags ?? []).map((t) => (
+              <Chip key={t} label={t} size="small" />
+            ))}
+          </Stack>
+        ),
+      },
+      {
         field: 'online',
         headerName: 'Online',
         width: 110,
@@ -99,7 +134,16 @@ export function NodesPage() {
           <Chip label={params.row.online ? 'Online' : 'Offline'} color={params.row.online ? 'success' : 'default'} size="small" />
         ),
       },
-      { field: 'lastSeen', headerName: 'Last seen', width: 200 },
+      {
+        field: 'lastSeen',
+        headerName: 'Last seen',
+        width: 160,
+        renderCell: (params) => (
+          <Tooltip title={params.row.lastSeen ?? '-'}>
+            <span>{formatRelativeTime(params.row.lastSeen)}</span>
+          </Tooltip>
+        ),
+      },
       {
         field: 'actions',
         headerName: '',
