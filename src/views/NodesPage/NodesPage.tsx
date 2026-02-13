@@ -54,6 +54,7 @@ export function NodesPage() {
   const [rows, setRows] = useState<V1Node[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [nameFilter, setNameFilter] = useState('');
 
   const [cleanupOpen, setCleanupOpen] = useState(false);
 
@@ -89,6 +90,12 @@ export function NodesPage() {
   }, [rows]);
 
   const cleanupDisabled = cleanupCandidates.length === 0;
+
+  const filteredRows = useMemo(() => {
+    const q = nameFilter.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((n) => (n.name ?? '').toLowerCase().includes(q));
+  }, [nameFilter, rows]);
 
   const cols = useMemo<GridColDef<V1Node>[]>(
     () => [
@@ -194,6 +201,13 @@ export function NodesPage() {
               <MobileMenuIconButton />
               <ServerIndicator />
               <ThemeToggleIconButton />
+              <TextField
+                size="small"
+                placeholder="Filter name"
+                value={nameFilter}
+                onChange={(e) => setNameFilter(e.target.value)}
+                sx={{ width: 220 }}
+              />
               <Button onClick={() => void load()} color="inherit">
                 Refresh
               </Button>
@@ -218,7 +232,7 @@ export function NodesPage() {
         <CardContent>
           <div style={{ height: 580, width: '100%' }}>
             <DataGrid
-              rows={rows}
+              rows={filteredRows}
               loading={loading}
               columns={cols}
               getRowId={(r) => r.id ?? `${r.name ?? 'node'}-${Math.random()}`}
