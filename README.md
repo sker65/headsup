@@ -41,6 +41,15 @@ Required env vars:
 - `BASE_URL` (or `VITE_BASE_URL`)
 - `APIKEY` (or `VITE_APIKEY`)
 
+### Optional: Basic Auth
+
+If you want to expose the container but require authentication, you can enable nginx HTTP Basic Auth.
+
+Set both env vars:
+
+- `BASIC_AUTH_USER`
+- `BASIC_AUTH_PASS`
+
 ### Build and run
 
 ```bash
@@ -48,6 +57,8 @@ docker build -t headsup .
 docker run --rm -p 8081:80 \
   -e BASE_URL="http://localhost:8080" \
   -e APIKEY="your_api_key_here" \
+  -e BASIC_AUTH_USER="admin" \
+  -e BASIC_AUTH_PASS="change_me" \
   headsup
 ```
 
