@@ -1,6 +1,12 @@
 # HeadsUp
 
-A self-contained web UI for the Headscale API.
+A self-contained web UI for the [Headscale](https://github.com/juanfont/headscale) API.
+
+## Screenshots
+
+![Screenshot 1](./images/screen1.png)
+
+![Screenshot 2](./images/screen2.png)
 
 ## Configuration
 
