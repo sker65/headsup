@@ -32,6 +32,8 @@ npm run dev
 
 The Docker image serves static files via nginx.
 
+Docker Hub: https://hub.docker.com/repository/docker/sker65/headsup
+
 ### Runtime configuration
 
 In Docker, `BASE_URL` and `APIKEY` are injected at **container start** into `/config.js`.
